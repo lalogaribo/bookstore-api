@@ -63,6 +63,9 @@ jobs:
         TAG=$(git rev-parse --short HEAD)
         echo "TAG=$TAG" >> $GITHUB_ENV
 
+    - name: Set KUBECONFIG
+      run: echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
+
     - name: Configure Kubernetes
       run: |
         mkdir -p $HOME/.kube
