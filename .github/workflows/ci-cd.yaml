@@ -41,7 +41,7 @@ jobs:
         docker push ghcr.io/${{ env.OWNER_LC }}/preparesh-bookstore-api:$TAG
 
   Deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: Build
     steps:
     - name: Checkout code
@@ -69,12 +69,6 @@ jobs:
         echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
         chmod 600 $HOME/.kube/config
 
-    - name: Deploy using Minikube context
+    - name: Deploy with Helm
       run: |
-        eval $(minikube -p minikube docker-env)
-        helm upgrade --install api ./helm \
-          --set image.repository=ghcr.io/lalogaribo/preparesh-bookstore-api \
-          --set image.tag=$TAG
-    # - name: Deploy with Helm
-    #   run: |
-    #     helm upgrade --install api ./helm --set image.repository=ghcr.io/${{ env.OWNER_LC }}/preparesh-bookstore-api --set image.tag=$TAG
+        helm upgrade --install api ./helm --set image.repository=ghcr.io/${{ env.OWNER_LC }}/preparesh-bookstore-api --set image.tag=$TAG
