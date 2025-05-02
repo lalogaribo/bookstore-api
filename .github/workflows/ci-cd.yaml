@@ -69,6 +69,12 @@ jobs:
         echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
         chmod 600 $HOME/.kube/config
 
-    - name: Deploy with Helm
+    - name: Deploy using Minikube context
       run: |
-        helm upgrade --install api ./helm --set image.repository=ghcr.io/${{ env.OWNER_LC }}/preparesh-bookstore-api --set image.tag=$TAG
+        eval $(minikube -p minikube docker-env)
+        helm upgrade --install api ./helm \
+          --set image.repository=ghcr.io/lalogaribo/preparesh-bookstore-api \
+          --set image.tag=$TAG
+    # - name: Deploy with Helm
+    #   run: |
+    #     helm upgrade --install api ./helm --set image.repository=ghcr.io/${{ env.OWNER_LC }}/preparesh-bookstore-api --set image.tag=$TAG
