@@ -62,7 +62,7 @@ jobs:
         export KUBECONFIG=$HOME/.kube/config
         TAG=$(git rev-parse --short HEAD)
         OWNER_LC=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
-        helm upgrade --install api ./helm \
+        helm upgrade --install api ./helm/bookstore-api \
           --set image.repository=ghcr.io/${OWNER_LC}/preparesh-bookstore-api \
           --set image.tag=$TAG
     # - name: Deploy with Helm
