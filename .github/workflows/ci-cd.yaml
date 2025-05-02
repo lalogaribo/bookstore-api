@@ -57,15 +57,14 @@ jobs:
       run: |
         echo "OWNER_LC=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-    - name: Get short commit hash
-      id: commit_hash
-      run: |
-        TAG=$(git rev-parse --short HEAD)
-        echo "TAG=$TAG" >> $GITHUB_ENV
-
-    - name: Set KUBECONFIG
-      run: echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
-
     - name: Deploy with Helm
       run: |
-        helm upgrade --install api ./helm --set image.repository=ghcr.io/${{ env.OWNER_LC }}/preparesh-bookstore-api --set image.tag=$TAG
+        export KUBECONFIG=$HOME/.kube/config
+        TAG=$(git rev-parse --short HEAD)
+        OWNER_LC=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
+        helm upgrade --install api ./helm \
+          --set image.repository=ghcr.io/${OWNER_LC}/preparesh-bookstore-api \
+          --set image.tag=$TAG
+    # - name: Deploy with Helm
+    #   run: |
+    #     helm upgrade --install api ./helm --set image.repository=ghcr.io/${{ env.OWNER_LC }}/preparesh-bookstore-api --set image.tag=$TAG
