@@ -9,7 +9,7 @@ jobs:
   Build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     outputs:
       new_tag: ${{ steps.version_tag.outputs.new_tag }}
