@@ -37,13 +37,12 @@ jobs:
 
     - name: Bump Semantic Version
       id: version_tag
-      uses: anothrNick/github-tag-action@v1.37.0
+      uses: anothrNick/github-tag-action@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         release_branches: main
-        semver: true
-        custom_tag: true
+        WITH_V: true
 
     - name: Build and push Docker image
       run: |
