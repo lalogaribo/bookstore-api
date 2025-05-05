@@ -29,16 +29,26 @@ jobs:
       run: |
         echo "OWNER_LC=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-    - name: Get short commit hash
-      id: commit_hash
-      run: |
-        TAG=$(git rev-parse --short HEAD)
-        echo "TAG=$TAG" >> $GITHUB_ENV
+    # - name: Get short commit hash
+    #   id: commit_hash
+    #   run: |
+    #     TAG=$(git rev-parse --short HEAD)
+    #     echo "TAG=$TAG" >> $GITHUB_ENV
+
+    - name: Bump Semantic Version
+      id: version_tag
+      uses: anothrNick/github-tag-action@v1.37.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        release_branches: main
+        semver: true
+        custom_tag: true
 
     - name: Build and push Docker image
       run: |
-        docker build -t ghcr.io/${{ env.OWNER_LC }}/preparesh-bookstore-api:$TAG .
-        docker push ghcr.io/${{ env.OWNER_LC }}/preparesh-bookstore-api:$TAG
+        docker build -t ghcr.io/${{ env.OWNER_LC }}/preparesh-bookstore-api:${{ steps.version_tag.outputs.new_tag }} .
+        docker push ghcr.io/${{ env.OWNER_LC }}/preparesh-bookstore-api:${{ steps.version_tag.outputs.new_tag }}
 
   Deploy:
     runs-on: self-hosted
