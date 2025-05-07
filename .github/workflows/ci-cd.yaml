@@ -83,12 +83,9 @@ jobs:
       run: |
         export KUBECONFIG=$HOME/.kube/config
         OWNER_LC=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
-        echo "Deploying to development with tag: ${{ needs.Build.outputs.new_tag }}"
         helm upgrade --install api ./helm/bookstore-api \
-          --namespace development \
           --set image.repository=ghcr.io/${OWNER_LC}/preparesh-bookstore-api \
           --set image.tag=${{ needs.Build.outputs.new_tag }} \
-          --set environment=development
 
   Deploy_Production:
     runs-on: self-hosted
