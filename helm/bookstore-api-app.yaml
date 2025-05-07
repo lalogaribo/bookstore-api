@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bookstore-api-prod
+  namespace: production
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/lalogaribo/bookstore-api.git
+    targetRevision: HEAD
+    path: helm
+    helm:
+      releaseName: api
+      valueFiles:
+      - bookstore-api/values-production.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true

@@ -1,5 +1,5 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: {{ .Release.Name }}-bookstore-api
   labels:
@@ -8,6 +8,7 @@ metadata:
     release: {{ .Release.Name }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: bookstore-api
@@ -50,3 +51,40 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
+  strategy:
+    {{- if eq .Values.rolloutStrategy "canary" }}
+    canary:
+      steps:
+      - setWeight: 20
+      - pause: {duration: 30s}
+      - setWeight: 40
+      - pause: {duration: 30s}
+      - setWeight: 60
+      - pause: {duration: 30s}
+      - setWeight: 80
+      - pause: {duration: 30s}
+      {{- if .Values.analysis.enabled }}
+      analysis:
+        templates:
+        - templateName: success-rate
+        args:
+        - name: service-name
+          value: {{ .Release.Name }}-bookstore-api-preview
+      {{- end }}
+    {{- else if eq .Values.rolloutStrategy "blueGreen" }}
+    blueGreen:
+      activeService: {{ .Release.Name }}-bookstore-api
+      previewService: {{ .Release.Name }}-bookstore-api-preview
+      autoPromotionEnabled: {{ .Values.autoPromotionEnabled | default false }}
+      {{- if .Values.autoPromotionEnabled }}
+      autoPromotionSeconds: {{ .Values.autoPromotionSeconds | default 30 }}
+      {{- end }}
+      {{- if .Values.analysis.enabled }}
+      prePromotionAnalysis:
+        templates:
+        - templateName: success-rate
+        args:
+        - name: service-name
+          value: {{ .Release.Name }}-bookstore-api-preview
+      {{- end }}
+    {{- end }}

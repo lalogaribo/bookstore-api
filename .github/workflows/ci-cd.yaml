@@ -2,6 +2,8 @@ name: Bookstore API CI/CD
 on:
   push:
     branches: [ main ]
+    tags:
+    - 'prod-release*'
   workflow_dispatch:
 
 
@@ -13,9 +15,23 @@ jobs:
       packages: write
     outputs:
       new_tag: ${{ steps.version_tag.outputs.new_tag }}
+      is_production: ${{ steps.check_environment.outputs.is_production }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # Needed to get all tags
+
+    - name: Check if production deployment
+      id: check_environment
+      run: |
+        if [[ "${{ github.ref }}" == refs/tags/prod-release* ]]; then
+          echo "is_production=true" >> $GITHUB_OUTPUT
+          echo "Detected production release tag: ${{ github.ref }}"
+        else
+          echo "is_production=false" >> $GITHUB_OUTPUT
+          echo "Not a production release"
+        fi
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -37,7 +53,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         WITH_V: true
-        PRERELEASE: true
+        PRERELEASE: ${{ steps.check_environment.outputs.is_production != 'true' }}
 
     - name: Build and push Docker image
       run: |
@@ -45,9 +61,10 @@ jobs:
         docker build -t ghcr.io/${{ env.OWNER_LC }}/preparesh-bookstore-api:${{ steps.version_tag.outputs.new_tag }} .
         docker push ghcr.io/${{ env.OWNER_LC }}/preparesh-bookstore-api:${{ steps.version_tag.outputs.new_tag }}
 
-  Deploy:
+  Deploy_Development:
     runs-on: self-hosted
     needs: Build
+    if: needs.Build.outputs.is_production != 'true'
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -62,11 +79,48 @@ jobs:
       run: |
         echo "OWNER_LC=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-    - name: Deploy with Helm
+    - name: Deploy with Helm to Development
       run: |
         export KUBECONFIG=$HOME/.kube/config
         OWNER_LC=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
-        echo "Deploying with tag: ${{ needs.Build.outputs.new_tag }}"
+        echo "Deploying to development with tag: ${{ needs.Build.outputs.new_tag }}"
         helm upgrade --install api ./helm/bookstore-api \
+          --namespace development \
           --set image.repository=ghcr.io/${OWNER_LC}/preparesh-bookstore-api \
-          --set image.tag=${{ needs.Build.outputs.new_tag }}
+          --set image.tag=${{ needs.Build.outputs.new_tag }} \
+          --set environment=development
+
+  Deploy_Production:
+    runs-on: self-hosted
+    needs: Build
+    if: needs.Build.outputs.is_production == 'true'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install kubectl
+      uses: azure/setup-kubectl@v3
+
+    - name: Install Helm
+      uses: azure/setup-helm@v3
+
+    - name: Set lowercase repository owner
+      run: |
+        echo "OWNER_LC=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+    - name: Update image tag in ArgoCD values file
+      run: |
+        echo "Updating production image tag to: ${{ needs.Build.outputs.new_tag }}"
+
+        VALUES_FILE="helm/bookstore-api/values-production.yaml"
+
+        # This assumes the tag is defined in the format: tag: "v1.0.0" or tag: v1.0.0
+        sed -i "s/tag:.*$/tag: \"${{ needs.Build.outputs.new_tag }}\"/" $VALUES_FILE
+
+        # Verify the change
+        echo "Updated values file content:"
+        grep -A 2 "tag:" $VALUES_FILE
+
+        git add $VALUES_FILE
+        git commit -m "Update production image tag to ${{ needs.Build.outputs.new_tag }}"
+        git push
