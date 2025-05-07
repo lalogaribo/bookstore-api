@@ -110,9 +110,10 @@ jobs:
         echo "Updating production image tag to: ${{ needs.Build.outputs.new_tag }}"
 
         VALUES_FILE="helm/bookstore-api/values-production.yaml"
+        NEW_TAG="${{ needs.Build.outputs.new_tag }}"
 
         # This assumes the tag is defined in the format: tag: "v1.0.0" or tag: v1.0.0
-        sed -i "s/tag:.*$/tag: \"${{ needs.Build.outputs.new_tag }}\"/" $VALUES_FILE
+        sed -i '' "s/tag:.*$/tag: \"${NEW_TAG}\"/" "$VALUES_FILE"
 
         # Verify the change
         echo "Updated values file content:"
